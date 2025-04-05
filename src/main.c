@@ -54,7 +54,7 @@ void init_tim() {
 	RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
 
 	TIM6->ARR = 1600;
-	TIM6->PSC = 0;
+	TIM6->PSC = 10;
 
 	TIM6->DIER |= TIM_DIER_UIE;
 	NVIC_SetPriority(TIM6_DAC_IRQn, 3);
@@ -63,16 +63,56 @@ void init_tim() {
 	TIM6->CR1 |= TIM_CR1_CEN;
 }
 
-void TIM6_DAC_IRQHandler() {
+int count_pulse = 1;
+void TIM2_IRQHandler() {
+	TIM2->SR &= ~TIM_SR_UIF;
+	if (count_pulse % 350 == 0) {
+		TIM2->CCR1++;
+		if (TIM2->CCR1 > 1100) {
+			TIM2->CCR1 = 0;
+		}
+	}
+	count_pulse++;
+}
 
+void init_tim2_as_pwm() {
+	RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
+	GPIOA->MODER |= GPIO_MODER_MODER0_1;
+	GPIOA->AFR[0] |= (1 << 0);
+
+	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+	TIM2->ARR = 1000;
+	TIM2->CCMR1 |= TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2;	//<- pwm mode 1!!!
+	TIM2->CCER |= TIM_CCER_CC1E;
+
+	TIM2->CCR1 = 0;
+
+	TIM2->BDTR |= TIM_BDTR_MOE;
+
+
+	TIM2->DIER |= TIM_DIER_UIE;
+	NVIC_SetPriority(TIM2_IRQn, 3);	//<- ????
+	NVIC_EnableIRQ(TIM2_IRQn);		//<- ????
+
+	TIM2->CR1 |= TIM_CR1_CEN;
+}
+
+void TIM6_DAC_IRQHandler() {
+	TIM6->SR &= ~TIM_SR_UIF;
+	BLINK();
 }
 
 int main(void)
 {
-	init_gpio();
+//	init_gpio();
+//	init_tim();
+	init_tim2_as_pwm();
+
+	int i = 0;
 	while(1) {
-		BLINK();
-		for (int i = 0; i < 5000; i++);
+		i++;
+//		for (int i = 0; i < 5000; i++);
 
 	}
 	return 0;
